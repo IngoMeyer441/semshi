@@ -1027,6 +1027,112 @@ def test_match_case():
     ''')
 
 
+@pytest.mark.skipif('sys.version_info < (3, 12)')
+def test_generic_syntax():
+    names = parse('''
+        #!/usr/bin/env python3
+        def get_first[T: float](data: list[T]) -> T:
+            first: T = data[0]
+            return first
+    ''')
+
+    expected = [
+        ('get_first', MODULE_FUNC),
+        *[('T', LOCAL), ('float', BUILTIN)],  # TypeVar with bound (T: float)
+        *[('list', BUILTIN), ('T', LOCAL)],  # list[T]
+        ('T', LOCAL),  # -> T:
+        # for now, arg name is visited *after* params and type annotations
+        # because of the way how variable scope is handled
+        ('data', PARAMETER),
+        *[('first', LOCAL), ('T', FREE), ('data', PARAMETER)],
+        ('first', LOCAL),  # return ...
+    ]
+    assert [(n.name, n.hl_group) for n in names] == expected
+
+
+@pytest.mark.skipif('sys.version_info < (3, 12)')
+def test_type_statement_py312():
+    # https://peps.python.org/pep-0695/
+    names = parse('''
+        #!/usr/bin/env python3
+        type IntList = list[int]  # non-generic case
+        type MyList[T] = list[T]
+        #           ^typevar  ^ a resolved reference (treated like a closure)
+
+        class A:
+            pass
+
+        def foo():
+            mylist: MyList[int] = [1, 2, 3]
+            # ^^^^ -> type statements used to break environment scope
+            assert len(mylist) == 3
+    ''')
+    expected = [
+        # non-generic type statement
+        *[('IntList', GLOBAL), ('list', BUILTIN), ('int', BUILTIN)],
+        # generic type statement
+        *[('MyList', GLOBAL), ('T', LOCAL), ('list', BUILTIN), ('T', FREE)],
+        # class A:
+        ('A', GLOBAL),
+        # def foo():
+        *[
+            ('foo', GLOBAL),
+            # mylist: Mylist[int]
+            *[('mylist', LOCAL), ('MyList', GLOBAL), ('int', BUILTIN)],
+            # assert len(mylist) == 3
+            *[('len', BUILTIN), ('mylist', LOCAL)],
+        ],
+    ]
+    assert [(n.name, n.hl_group) for n in names] == expected
+
+
+@pytest.mark.skipif('sys.version_info < (3, 13)')
+def test_type_statement_py313():
+    """type statement with bound (3.12+) and default (3.13+) parameters."""
+    # https://peps.python.org/pep-0695/
+    names = parse('''
+        #!/usr/bin/env python3
+        type Alias1[T, P] = list[P] | set[T]
+        type Alias2[T, P: type[T]] = list[P] | set[T]
+        type Alias3[T, P = T] = list[P] | set[T]
+        type Alias4[T: int, P: int = bool | T] = list[P] | set[T]
+
+        def foo():
+            mylist: list[int] = [1, 2, 3]
+            assert len(mylist) == 3
+    ''')
+    RHS_listP_or_setT = [
+        *[('list', BUILTIN), ('P', FREE)],
+        *[('set', BUILTIN), ('T', FREE)],
+    ]
+    expected = [
+        # Alias1
+        *[('Alias1', GLOBAL), ('T', LOCAL), ('P', LOCAL), *RHS_listP_or_setT],
+        # Alias2: bound (P: type[T])
+        *[('Alias2', GLOBAL), ('T', LOCAL), ('P', LOCAL), ('type', BUILTIN),
+          ('T', FREE), *RHS_listP_or_setT],
+        # Alias3: default
+        *[('Alias3', GLOBAL), ('T', LOCAL), ('P', LOCAL),
+          ('T', FREE), *RHS_listP_or_setT],
+        # Alias4: bound and  default
+        *[
+            ('Alias4', GLOBAL),  # ...
+            *[('T', LOCAL), ('int', BUILTIN)],
+            *[('P', LOCAL), ('int', BUILTIN), ('bool', BUILTIN), ('T', FREE)],
+            *RHS_listP_or_setT
+        ],
+        # remaining stuff, def foo(): ... should be unaffected
+        *[
+            ('foo', GLOBAL),
+            # mylist: Mylist[int]
+            *[('mylist', LOCAL), ('list', BUILTIN), ('int', BUILTIN)],
+            # assert len(mylist) == 3
+            *[('len', BUILTIN), ('mylist', LOCAL)],
+        ],
+    ]
+    assert [(n.name, n.hl_group) for n in names] == expected
+
+
 class TestNode:
 
     def test_node(self):

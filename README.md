@@ -7,7 +7,14 @@
 
 Semshi provides semantic highlighting for Python in Neovim.
 
-*This is a maintained fork of [the original repository, numirias/semshi](https://github.com/numirias/semshi), which has been not maintained since 2021. Please watch [the tracking issue](https://github.com/wookayin/semshi/issues/1) for what has been updated in this fork.*
+> [!NOTE]
+> This is a maintained fork of [the original repository, numirias/semshi](https://github.com/numirias/semshi), which has been abandoned since 2021.
+> Please see [release notes](https://github.com/wookayin/semshi/releases) to what has been changed and updated in this fork.
+
+> [!NOTE]
+> For [LSP-based semantic highlight](https://neovim.io/doc/user/lsp.html#lsp-semantic-highlight), I strongly recommend
+> [basedpyright](https://github.com/DetachHead/basedpyright), a Python language server that natively support LSP's semantic tokens, in place of semshi.
+
 
 Unlike regex-based syntax highlighters, Semshi understands Python code and performs static analysis as you type. It builds a syntax tree and symbol tables to highlight names based on their scope and context. This makes code easier to read and lets you quickly identify missing imports, unused arguments, misspelled names, and more.
 
@@ -200,7 +207,8 @@ No. Semshi relies on Neovim's fast highlighting API to quickly update lots of hi
 
 No. [Migrate your old python code!](https://pythonclock.org/)
 
-We require Python >= 3.6. Regarding old version support, see [#19](https://github.com/numirias/semshi/issues/19) for the original repository's discussion.
+We require **Python >= 3.7**.
+Please note that the python interpreter being used by semshi is [the python3 rplugin provider](https://neovim.io/doc/user/provider.html#provider-python), i.e. see `g:python3_host_prog`.
 
 ### Semshi is too slow.
 
