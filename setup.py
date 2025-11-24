@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='semshi',
     description='Semantic Highlighting for Python in Neovim',
-    version='0.4.0',
+    version='0.5.0.dev0',
     packages=['semshi'],
     # Original repo: https://github.com/numirias/semshi
     # author='numirias',
